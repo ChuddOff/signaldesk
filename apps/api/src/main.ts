@@ -7,6 +7,7 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get('PORT');
-  await app.listen(port && typeof +port === 'number' ? port : 3000);
+  const portNumber = Number(port);
+  await app.listen(!Number.isNaN(portNumber) ? portNumber : 3000);
 }
 bootstrap();
