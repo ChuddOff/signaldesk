@@ -1,4 +1,16 @@
 {
   "name": "signaldesk",
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:web": "pnpm --filter web dev",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "lint:api": "pnpm --filter api lint",
+    "lint:web": "pnpm --filter web lint",
+    "lint": "pnpm --filter api lint && pnpm --filter web lint",
+    "test": "pnpm --filter api test"
+  }
 }
