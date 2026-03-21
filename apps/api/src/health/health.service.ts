@@ -7,7 +7,14 @@ import {
 
 @Injectable()
 export class HealthService {
-  check(params: HealthParamsDto, query: HealthQueryDto, body?: HealthBodyDto) {
-    return { status: 'ok' + body?.body + params.params + query.query };
+  check() {
+    return { status: 'ok' };
+  }
+  checkPost(
+    params: HealthParamsDto,
+    query: HealthQueryDto,
+    body: HealthBodyDto,
+  ) {
+    return { status: 'ok' + params.params + query.query + body.body };
   }
 }

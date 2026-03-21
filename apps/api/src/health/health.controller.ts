@@ -9,12 +9,9 @@ import {
 @Controller('health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
-  @Get(':params')
-  health(
-    @Query() query: HealthQueryDto,
-    @Param() params: HealthParamsDto,
-  ): { status: string } {
-    return this.healthService.check(params, query);
+  @Get()
+  health(): { status: string } {
+    return this.healthService.check();
   }
 
   @Post(':params')
@@ -23,6 +20,6 @@ export class HealthController {
     @Param() params: HealthParamsDto,
     @Body() body: HealthBodyDto,
   ): { status: string } {
-    return this.healthService.check(params, query, body);
+    return this.healthService.checkPost(params, query, body);
   }
 }
