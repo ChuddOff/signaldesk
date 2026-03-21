@@ -7,6 +7,6 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get('PORT');
-  await app.listen(port && typeof port === 'number' ? port : 3000);
+  await app.listen(port && typeof +port === 'number' ? port : 3000);
 }
 bootstrap();
