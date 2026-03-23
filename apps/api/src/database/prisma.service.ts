@@ -11,10 +11,6 @@ export class PrismaService
   constructor(configService: ConfigService) {
     const connectionString = configService.get<string>('DATABASE_URL');
 
-    if (!connectionString) {
-      throw new Error('DATABASE_URL is not set');
-    }
-
     const adapter = new PrismaPg({ connectionString: connectionString! });
 
     super({ adapter });
