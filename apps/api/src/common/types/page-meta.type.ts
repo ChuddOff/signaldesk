@@ -1,4 +1,4 @@
-export interface PaginationMetaDto {
+export interface PaginationMeta {
   first: number;
   items: number;
   last: number;
