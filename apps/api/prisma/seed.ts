@@ -15,6 +15,7 @@ async function main() {
     update: {},
     create: {
       email: 'dev-admin@signaldesk.local',
+      displayName: 'Dev Admin',
     },
   });
 
