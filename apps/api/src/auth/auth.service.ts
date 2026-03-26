@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { RegisterDto } from './dto/create-auth.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { HashService } from './hash.service';
@@ -16,7 +16,7 @@ export class AuthService {
       .findUnique({ where: { email } })
       .then((user) => {
         if (user?.email) {
-          throw new Error('Почта занята');
+          throw new ConflictException('Почта занята');
         }
       });
 
@@ -34,10 +34,15 @@ export class AuthService {
       })
       .catch((err) => {
         if (err.code === 'P2002') {
-          throw new Error('Почта занята');
+          throw new ConflictException('Почта занята');
         }
+        throw err;
       });
 
-    return result;
+    return {
+      id: result?.id,
+      email: result?.email,
+      displayName: result?.displayName,
+    };
   }
 }

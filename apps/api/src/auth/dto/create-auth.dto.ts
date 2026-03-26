@@ -3,6 +3,7 @@ import { IsEmail, IsNotEmpty, IsString, Max, Min } from 'class-validator';
 export class RegisterDto {
   @IsEmail()
   email: string;
+  @IsString()
   @IsNotEmpty()
   @Min(8, { message: 'Пароль должен быть больше 8 символов' })
   @Max(20, { message: 'Пароль должен быть меньше 20 символов' })
