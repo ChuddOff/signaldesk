@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { HashService } from './hash.service';
@@ -47,11 +51,11 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const user = await this.prismaService.user.findUnique({
-      where: { email: loginDto.email },
+      where: { email: loginDto.email.trim().toLowerCase() },
     });
 
     if (!user || !user.passwordHash) {
-      throw new ConflictException('Неверные данные');
+      throw new UnauthorizedException('Неверные данные');
     }
 
     const isRightPassword = await this.hashService.verifyPassword(
@@ -60,13 +64,13 @@ export class AuthService {
     );
 
     if (!isRightPassword) {
-      throw new ConflictException('Неверные данные');
+      throw new UnauthorizedException('Неверные данные');
     }
 
     return {
-      id: user?.id,
-      email: user?.email,
-      displayName: user?.displayName,
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
     };
   }
 }
