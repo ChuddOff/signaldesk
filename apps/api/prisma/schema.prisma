@@ -10,7 +10,7 @@ datasource db {
 model User {
   id              String   @id @default(cuid())
   email           String   @unique
-  displayName     String   @unique
+  displayName     String
   passwordHash    String?
   isEmailVerified Boolean  @default(false)
   avatarUrl       String?

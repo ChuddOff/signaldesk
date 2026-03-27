@@ -1,7 +1,8 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { RegisterDto } from './dto/create-auth.dto';
+import { RegisterDto } from './dto/register.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { HashService } from './hash.service';
+import { Prisma } from 'generated/prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -9,7 +10,7 @@ export class AuthService {
     private prismaService: PrismaService,
     private hashService: HashService,
   ) {}
-  async create(createAuthDto: RegisterDto) {
+  async register(createAuthDto: RegisterDto) {
     const email = createAuthDto.email.trim().toLowerCase();
 
     await this.prismaService.user
@@ -24,20 +25,24 @@ export class AuthService {
       createAuthDto.password,
     );
 
-    const result = await this.prismaService.user
-      .create({
+    let result;
+
+    try {
+      result = await this.prismaService.user.create({
         data: {
           email,
           passwordHash: password,
           displayName: createAuthDto.displayName,
         },
-      })
-      .catch((err) => {
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
           throw new ConflictException('Почта занята');
         }
-        throw err;
-      });
+      }
+      throw err;
+    }
 
     return {
       id: result?.id,
