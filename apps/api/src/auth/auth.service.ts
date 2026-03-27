@@ -52,7 +52,7 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ip: string, userAgent: string) {
     const user = await this.prismaService.user.findUnique({
       where: { email: loginDto.email.trim().toLowerCase() },
     });
@@ -74,6 +74,10 @@ export class AuthService {
       sub: user.id,
     });
 
+    const hashToken = await this.hashService.hashPassword(refreshToken);
+
+    this.newSession(user.id, hashToken, ip, userAgent);
+
     return {
       id: user.id,
       email: user.email,
@@ -81,5 +85,21 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async newSession(
+    userId: string,
+    refreshTokenHash: string,
+    ip: string,
+    userAgent: string,
+  ) {
+    await this.prismaService.session.create({
+      data: {
+        userId,
+        ip,
+        userAgent,
+        refreshTokenHash,
+      },
+    });
   }
 }
