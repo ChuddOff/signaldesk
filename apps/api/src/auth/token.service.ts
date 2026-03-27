@@ -11,18 +11,11 @@ export class TokenService {
   ) {}
 
   async getAccessToken(payload: { sub: string }) {
-    const secret = this.configService.get<string>('JWT_ACCESS_SECRET');
-    const expiresIn = this.configService.get<StringValue>(
-      'JWT_ACCESS_EXPIRES_IN',
-    );
-    return await this.jwtService.signAsync(payload, {
-      secret: secret,
-      expiresIn: expiresIn,
-    });
+    return await this.jwtService.signAsync(payload);
   }
 
   async getRefreshToken(payload: { sub: string }) {
-    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    const secret = this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
     const expiresIn = this.configService.get<StringValue>(
       'JWT_REFRESH_EXPIRES_IN',
     );
