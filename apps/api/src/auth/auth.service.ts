@@ -8,12 +8,14 @@ import { PrismaService } from 'src/database/prisma.service';
 import { HashService } from './hash.service';
 import { Prisma } from '../generated/prisma/client';
 import { LoginDto } from './dto/login.dto';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prismaService: PrismaService,
     private hashService: HashService,
+    private tokenService: TokenService,
   ) {}
   async register(registerDto: RegisterDto) {
     const email = registerDto.email.trim().toLowerCase();
@@ -34,10 +36,15 @@ export class AuthService {
           displayName: registerDto.displayName.trim(),
         },
       });
+      const { accessToken, refreshToken } = await this.tokenService.getTokens({
+        sub: result.id,
+      });
       return {
         id: result?.id,
         email: result?.email,
         displayName: result?.displayName,
+        accessToken,
+        refreshToken,
       };
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -67,10 +74,16 @@ export class AuthService {
       throw new UnauthorizedException('Неверные данные');
     }
 
+    const { accessToken, refreshToken } = await this.tokenService.getTokens({
+      sub: user.id,
+    });
+
     return {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
+      accessToken,
+      refreshToken,
     };
   }
 }
