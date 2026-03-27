@@ -18,7 +18,7 @@ export class AuthController {
     const ip =
       req.ip ||
       (Array.isArray(req.headers['x-forwarded-for'])
-        ? req.headers['x-forwarded-for'][0]
+        ? (req.headers['x-forwarded-for'][0] as string)
         : (req.headers['x-forwarded-for'] as string));
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.authService.login(loginDto, ip, userAgent);
