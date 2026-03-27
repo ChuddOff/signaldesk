@@ -15,7 +15,11 @@ export class AuthController {
 
   @Post('login')
   login(@Body() loginDto: LoginDto, @Req() req: Request) {
-    const ip = req.ip || (req.headers['x-forwarded-for'] as string);
+    const ip =
+      req.ip ||
+      (Array.isArray(req.headers['x-forwarded-for'])
+        ? req.headers['x-forwarded-for'][0]
+        : (req.headers['x-forwarded-for'] as string));
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.authService.login(loginDto, ip, userAgent);
   }

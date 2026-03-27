@@ -26,7 +26,7 @@ export class AuthService {
       throw new ConflictException('Почта занята');
     }
 
-    const password = await this.hashService.hashPassword(registerDto.password);
+    const password = await this.hashService.hash(registerDto.password);
 
     try {
       const result = await this.prismaService.user.create({
@@ -61,7 +61,7 @@ export class AuthService {
       throw new UnauthorizedException('Неверные данные');
     }
 
-    const isRightPassword = await this.hashService.verifyPassword(
+    const isRightPassword = await this.hashService.verify(
       loginDto.password,
       user.passwordHash,
     );
@@ -74,9 +74,9 @@ export class AuthService {
       sub: user.id,
     });
 
-    const hashToken = await this.hashService.hashPassword(refreshToken);
+    const hashToken = await this.hashService.hash(refreshToken);
 
-    this.newSession(user.id, hashToken, ip, userAgent);
+    await this.createSession(user.id, hashToken, ip, userAgent);
 
     return {
       id: user.id,
@@ -87,7 +87,7 @@ export class AuthService {
     };
   }
 
-  async newSession(
+  private async createSession(
     userId: string,
     refreshTokenHash: string,
     ip: string,
@@ -99,6 +99,7 @@ export class AuthService {
         ip,
         userAgent,
         refreshTokenHash,
+        lastSeenAt: new Date(),
       },
     });
   }
