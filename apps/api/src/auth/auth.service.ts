@@ -3,6 +3,7 @@ import { RegisterDto } from './dto/register.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { HashService } from './hash.service';
 import { Prisma } from '../generated/prisma/client';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -10,8 +11,8 @@ export class AuthService {
     private prismaService: PrismaService,
     private hashService: HashService,
   ) {}
-  async register(createAuthDto: RegisterDto) {
-    const email = createAuthDto.email.trim().toLowerCase();
+  async register(registerDto: RegisterDto) {
+    const email = registerDto.email.trim().toLowerCase();
 
     const user = await this.prismaService.user.findUnique({ where: { email } });
 
@@ -19,16 +20,14 @@ export class AuthService {
       throw new ConflictException('Почта занята');
     }
 
-    const password = await this.hashService.hashPassword(
-      createAuthDto.password,
-    );
+    const password = await this.hashService.hashPassword(registerDto.password);
 
     try {
       const result = await this.prismaService.user.create({
         data: {
           email,
           passwordHash: password,
-          displayName: createAuthDto.displayName.trim(),
+          displayName: registerDto.displayName.trim(),
         },
       });
       return {
@@ -44,5 +43,30 @@ export class AuthService {
       }
       throw err;
     }
+  }
+
+  async login(loginDto: LoginDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: loginDto.email },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new ConflictException('Неверные данные');
+    }
+
+    const isRightPassword = await this.hashService.verifyPassword(
+      loginDto.password,
+      user.passwordHash,
+    );
+
+    if (!isRightPassword) {
+      throw new ConflictException('Неверные данные');
+    }
+
+    return {
+      id: user?.id,
+      email: user?.email,
+      displayName: user?.displayName,
+    };
   }
 }
