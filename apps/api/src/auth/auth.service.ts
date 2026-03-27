@@ -36,15 +36,11 @@ export class AuthService {
           displayName: registerDto.displayName.trim(),
         },
       });
-      const { accessToken, refreshToken } = await this.tokenService.getTokens({
-        sub: result.id,
-      });
+
       return {
         id: result?.id,
         email: result?.email,
         displayName: result?.displayName,
-        accessToken,
-        refreshToken,
       };
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
