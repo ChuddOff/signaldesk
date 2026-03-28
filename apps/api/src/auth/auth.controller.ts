@@ -25,7 +25,7 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] || 'unknown';
     const deviceId = Array.isArray(req.headers['x-device-id'])
       ? req.headers['x-device-id'][0]
-      : req.headers['x-device-id'] || 'unknown';
+      : req.headers['x-device-id'];
     return this.authService.login(loginDto, ip, userAgent, deviceId);
   }
 

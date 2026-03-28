@@ -29,7 +29,7 @@ model Session {
   refreshTokenHash String
   userAgent        String?
   ip               String?
-  deviceId         String
+  deviceId         String?
   lastSeenAt       DateTime?
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())

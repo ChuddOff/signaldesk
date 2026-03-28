@@ -76,9 +76,11 @@ export class AuthService {
       throw new UnauthorizedException('Неверные данные');
     }
 
-    const anotherSession = await this.prismaService.session.findFirst({
-      where: { userId: user.id, deviceId, revokedAt: null },
-    });
+    const anotherSession = !!deviceId
+      ? await this.prismaService.session.findFirst({
+          where: { userId: user.id, deviceId, revokedAt: null },
+        })
+      : undefined;
 
     if (anotherSession?.id && deviceId) {
       const { accessToken, refreshToken } = await this.tokenService.getTokens({
@@ -91,6 +93,8 @@ export class AuthService {
         data: {
           refreshTokenHash: hashToken,
           lastSeenAt: new Date(),
+          ip,
+          userAgent,
         },
       });
 
