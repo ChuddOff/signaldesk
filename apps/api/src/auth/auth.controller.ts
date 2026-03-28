@@ -26,7 +26,7 @@ export class AuthController {
   }
 
   @Post('refresh')
-  refresh(@Body('refreshToken') refreshDto: RefreshDto, @Req() req: Request) {
+  refresh(@Body() refreshDto: RefreshDto, @Req() req: Request) {
     const ip =
       req.ip ||
       (Array.isArray(req.headers['x-forwarded-for'])

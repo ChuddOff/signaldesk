@@ -78,7 +78,16 @@ export class AuthService {
 
     const hashToken = await this.hashService.hash(refreshToken);
 
-    await this.createSession(user.id, hashToken, ip, userAgent);
+    await this.prismaService.session.create({
+      data: {
+        userId: user.id,
+        ip,
+        userAgent,
+        refreshTokenHash: hashToken,
+        lastSeenAt: new Date(),
+        id: sessionId,
+      },
+    });
 
     return {
       id: user.id,
@@ -102,7 +111,7 @@ export class AuthService {
       where: { id: sessionId },
     });
 
-    if (!session || session.userId !== userId) {
+    if (!session || session.userId !== userId || !!session.revokedAt) {
       throw new UnauthorizedException('Неверные данные');
     }
 
@@ -134,22 +143,5 @@ export class AuthService {
       accessToken,
       refreshToken: newRefreshToken,
     };
-  }
-
-  private async createSession(
-    userId: string,
-    refreshTokenHash: string,
-    ip: string,
-    userAgent: string,
-  ) {
-    await this.prismaService.session.create({
-      data: {
-        userId,
-        ip,
-        userAgent,
-        refreshTokenHash,
-        lastSeenAt: new Date(),
-      },
-    });
   }
 }

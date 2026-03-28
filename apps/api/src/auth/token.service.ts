@@ -11,7 +11,9 @@ export class TokenService {
   ) {}
 
   async getAccessToken(payload: { userId: string; sessionId: string }) {
-    return await this.jwtService.signAsync(payload);
+    return await this.jwtService.signAsync({
+      userId: payload.userId,
+    });
   }
 
   async getRefreshToken(payload: { userId: string; sessionId: string }) {
@@ -27,7 +29,9 @@ export class TokenService {
 
   async verifyRefreshToken(token: string) {
     try {
-      return await this.jwtService.verifyAsync(token);
+      return await this.jwtService.verifyAsync(token, {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      });
     } catch (error) {
       throw new UnauthorizedException('Неверные данные');
     }
