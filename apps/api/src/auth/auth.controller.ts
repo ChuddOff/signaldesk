@@ -35,4 +35,14 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.authService.refresh(refreshDto.refreshToken, ip, userAgent);
   }
+
+  @Post('logout')
+  logout(@Body() logoutDto: RefreshDto) {
+    return this.authService.logout(logoutDto.refreshToken);
+  }
+
+  @Post('logout-all')
+  logoutAll(@Body() logoutDto: RefreshDto) {
+    return this.authService.logoutAll(logoutDto.refreshToken);
+  }
 }

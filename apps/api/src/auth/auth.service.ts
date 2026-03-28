@@ -78,16 +78,30 @@ export class AuthService {
 
     const hashToken = await this.hashService.hash(refreshToken);
 
-    await this.prismaService.session.create({
-      data: {
-        userId: user.id,
-        ip,
-        userAgent,
-        refreshTokenHash: hashToken,
-        lastSeenAt: new Date(),
-        id: sessionId,
-      },
+    const anotherSession = await this.prismaService.session.findFirst({
+      where: { userId: user.id, userAgent, ip, revokedAt: null },
     });
+
+    if (anotherSession?.id) {
+      await this.prismaService.session.update({
+        where: { id: anotherSession.id },
+        data: {
+          refreshTokenHash: hashToken,
+          lastSeenAt: new Date(),
+        },
+      });
+    } else {
+      await this.prismaService.session.create({
+        data: {
+          userId: user.id,
+          ip,
+          userAgent,
+          refreshTokenHash: hashToken,
+          lastSeenAt: new Date(),
+          id: sessionId,
+        },
+      });
+    }
 
     return {
       id: user.id,
@@ -99,6 +113,57 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string, ip: string, userAgent: string) {
+    const { session, userId, sessionId } =
+      await this.resolveSessionByRefreshToken(refreshToken);
+
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.tokenService.getTokens({ userId, sessionId: session.id });
+
+    const hashToken = await this.hashService.hash(newRefreshToken);
+
+    await this.prismaService.session.update({
+      where: { id: sessionId },
+      data: {
+        lastSeenAt: new Date(),
+        refreshTokenHash: hashToken,
+        userAgent,
+        ip,
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  async logout(refreshToken: string) {
+    const { sessionId } = await this.resolveSessionByRefreshToken(refreshToken);
+
+    await this.prismaService.session.update({
+      where: { id: sessionId },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return true;
+  }
+
+  async logoutAll(refreshToken: string) {
+    const { userId } = await this.resolveSessionByRefreshToken(refreshToken);
+
+    await this.prismaService.session.updateMany({
+      where: { id: userId },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return true;
+  }
+
+  private async resolveSessionByRefreshToken(refreshToken: string) {
     const payload = await this.tokenService.verifyRefreshToken(refreshToken);
 
     if (!payload || !payload.userId || !payload.sessionId) {
@@ -124,24 +189,6 @@ export class AuthService {
       throw new UnauthorizedException('Неверные данные');
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await this.tokenService.getTokens({ userId, sessionId: session.id });
-
-    const hashToken = await this.hashService.hash(newRefreshToken);
-
-    await this.prismaService.session.update({
-      where: { id: sessionId },
-      data: {
-        lastSeenAt: new Date(),
-        refreshTokenHash: hashToken,
-        userAgent,
-        ip,
-      },
-    });
-
-    return {
-      accessToken,
-      refreshToken: newRefreshToken,
-    };
+    return { session, userId, sessionId };
   }
 }
