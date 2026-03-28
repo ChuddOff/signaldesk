@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
@@ -10,11 +10,11 @@ export class TokenService {
     private configService: ConfigService,
   ) {}
 
-  async getAccessToken(payload: { sub: string }) {
+  async getAccessToken(payload: { userId: string; sessionId: string }) {
     return await this.jwtService.signAsync(payload);
   }
 
-  async getRefreshToken(payload: { sub: string }) {
+  async getRefreshToken(payload: { userId: string; sessionId: string }) {
     const secret = this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
     const expiresIn = this.configService.get<StringValue>(
       'JWT_REFRESH_EXPIRES_IN',
@@ -25,11 +25,15 @@ export class TokenService {
     });
   }
 
-  async getIdFromAccessToken(token: string) {
-    return this.jwtService.decode(token);
+  async verifyRefreshToken(token: string) {
+    try {
+      return await this.jwtService.verifyAsync(token);
+    } catch (error) {
+      throw new UnauthorizedException('Неверные данные');
+    }
   }
 
-  async getTokens(payload: { sub: string }) {
+  async getTokens(payload: { userId: string; sessionId: string }) {
     return {
       accessToken: await this.getAccessToken(payload),
       refreshToken: await this.getRefreshToken(payload),

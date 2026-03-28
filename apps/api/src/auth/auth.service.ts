@@ -9,6 +9,7 @@ import { HashService } from './hash.service';
 import { Prisma } from '../generated/prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { TokenService } from './token.service';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class AuthService {
@@ -69,9 +70,10 @@ export class AuthService {
     if (!isRightPassword) {
       throw new UnauthorizedException('Неверные данные');
     }
-
+    const sessionId = randomUUID();
     const { accessToken, refreshToken } = await this.tokenService.getTokens({
-      sub: user.id,
+      userId: user.id,
+      sessionId,
     });
 
     const hashToken = await this.hashService.hash(refreshToken);
@@ -88,13 +90,19 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string, ip: string, userAgent: string) {
-    const id = await this.tokenService.getIdFromAccessToken(refreshToken);
+    const payload = await this.tokenService.verifyRefreshToken(refreshToken);
+
+    if (!payload || !payload.userId || !payload.sessionId) {
+      throw new UnauthorizedException('Неверные данные');
+    }
+
+    const { userId, sessionId } = payload;
 
     const session = await this.prismaService.session.findUnique({
-      where: { id },
+      where: { id: sessionId },
     });
 
-    if (!session) {
+    if (!session || session.userId !== userId) {
       throw new UnauthorizedException('Неверные данные');
     }
 
@@ -108,12 +116,12 @@ export class AuthService {
     }
 
     const { accessToken, refreshToken: newRefreshToken } =
-      await this.tokenService.getTokens({ sub: id });
+      await this.tokenService.getTokens({ userId, sessionId: session.id });
 
     const hashToken = await this.hashService.hash(newRefreshToken);
 
     await this.prismaService.session.update({
-      where: { id },
+      where: { id: sessionId },
       data: {
         lastSeenAt: new Date(),
         refreshTokenHash: hashToken,

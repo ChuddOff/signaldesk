@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { Request } from 'express';
+import { RefreshDto } from './dto/refresh.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -25,13 +26,13 @@ export class AuthController {
   }
 
   @Post('refresh')
-  refresh(@Body('refreshToken') refreshToken: string, @Req() req: Request) {
+  refresh(@Body('refreshToken') refreshDto: RefreshDto, @Req() req: Request) {
     const ip =
       req.ip ||
       (Array.isArray(req.headers['x-forwarded-for'])
         ? (req.headers['x-forwarded-for'][0] as string)
         : (req.headers['x-forwarded-for'] as string));
     const userAgent = req.headers['user-agent'] || 'unknown';
-    return this.authService.refresh(refreshToken, ip, userAgent);
+    return this.authService.refresh(refreshDto.refreshToken, ip, userAgent);
   }
 }
