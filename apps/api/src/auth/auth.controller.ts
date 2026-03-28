@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { Request } from 'express';
 import { RefreshDto } from './dto/refresh.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -37,12 +38,12 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@Body() logoutDto: RefreshDto) {
+  logout(@Body() logoutDto: LogoutDto) {
     return this.authService.logout(logoutDto.refreshToken);
   }
 
   @Post('logout-all')
-  logoutAll(@Body() logoutDto: RefreshDto) {
+  logoutAll(@Body() logoutDto: LogoutDto) {
     return this.authService.logoutAll(logoutDto.refreshToken);
   }
 }

@@ -70,19 +70,17 @@ export class AuthService {
     if (!isRightPassword) {
       throw new UnauthorizedException('Неверные данные');
     }
-    const sessionId = randomUUID();
-    const { accessToken, refreshToken } = await this.tokenService.getTokens({
-      userId: user.id,
-      sessionId,
-    });
-
-    const hashToken = await this.hashService.hash(refreshToken);
 
     const anotherSession = await this.prismaService.session.findFirst({
       where: { userId: user.id, userAgent, ip, revokedAt: null },
     });
 
     if (anotherSession?.id) {
+      const { accessToken, refreshToken } = await this.tokenService.getTokens({
+        userId: user.id,
+        sessionId: anotherSession.id,
+      });
+      const hashToken = await this.hashService.hash(refreshToken);
       await this.prismaService.session.update({
         where: { id: anotherSession.id },
         data: {
@@ -90,7 +88,22 @@ export class AuthService {
           lastSeenAt: new Date(),
         },
       });
+
+      return {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        accessToken,
+        refreshToken,
+      };
     } else {
+      const sessionId = randomUUID();
+      const { accessToken, refreshToken } = await this.tokenService.getTokens({
+        userId: user.id,
+        sessionId,
+      });
+
+      const hashToken = await this.hashService.hash(refreshToken);
       await this.prismaService.session.create({
         data: {
           userId: user.id,
@@ -101,15 +114,15 @@ export class AuthService {
           id: sessionId,
         },
       });
-    }
 
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      accessToken,
-      refreshToken,
-    };
+      return {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        accessToken,
+        refreshToken,
+      };
+    }
   }
 
   async refresh(refreshToken: string, ip: string, userAgent: string) {
@@ -154,7 +167,7 @@ export class AuthService {
     const { userId } = await this.resolveSessionByRefreshToken(refreshToken);
 
     await this.prismaService.session.updateMany({
-      where: { id: userId },
+      where: { userId: userId, revokedAt: null },
       data: {
         revokedAt: new Date(),
       },
