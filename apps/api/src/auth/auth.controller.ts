@@ -20,12 +20,12 @@ export class AuthController {
     const ip =
       req.ip ||
       (Array.isArray(req.headers['x-forwarded-for'])
-        ? (JSON.stringify(req.headers['x-forwarded-for']) as string)
+        ? (req.headers['x-forwarded-for'][0] as string)
         : (req.headers['x-forwarded-for'] as string));
     const userAgent = req.headers['user-agent'] || 'unknown';
-    const deviceId = Array.isArray(req.headers['device-id'])
-      ? JSON.stringify(req.headers['device-id'])
-      : req.headers['device-id'] || 'unknown';
+    const deviceId = Array.isArray(req.headers['x-device-id'])
+      ? req.headers['x-device-id'][0]
+      : req.headers['x-device-id'] || 'unknown';
     return this.authService.login(loginDto, ip, userAgent, deviceId);
   }
 
@@ -34,7 +34,7 @@ export class AuthController {
     const ip =
       req.ip ||
       (Array.isArray(req.headers['x-forwarded-for'])
-        ? (JSON.stringify(req.headers['x-forwarded-for']) as string)
+        ? (req.headers['x-forwarded-for'][0] as string)
         : (req.headers['x-forwarded-for'] as string));
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.authService.refresh(refreshDto.refreshToken, ip, userAgent);
