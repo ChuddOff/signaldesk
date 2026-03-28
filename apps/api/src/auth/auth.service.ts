@@ -87,6 +87,47 @@ export class AuthService {
     };
   }
 
+  async refresh(refreshToken: string, ip: string, userAgent: string) {
+    const id = await this.tokenService.getIdFromAccessToken(refreshToken);
+
+    const session = await this.prismaService.session.findUnique({
+      where: { id },
+    });
+
+    if (!session) {
+      throw new UnauthorizedException('Неверные данные');
+    }
+
+    const isRightToken = await this.hashService.verify(
+      refreshToken,
+      session?.refreshTokenHash,
+    );
+
+    if (!isRightToken) {
+      throw new UnauthorizedException('Неверные данные');
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.tokenService.getTokens({ sub: id });
+
+    const hashToken = await this.hashService.hash(newRefreshToken);
+
+    await this.prismaService.session.update({
+      where: { id },
+      data: {
+        lastSeenAt: new Date(),
+        refreshTokenHash: hashToken,
+        userAgent,
+        ip,
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
   private async createSession(
     userId: string,
     refreshTokenHash: string,

@@ -25,6 +25,10 @@ export class TokenService {
     });
   }
 
+  async getIdFromAccessToken(token: string) {
+    return this.jwtService.decode(token);
+  }
+
   async getTokens(payload: { sub: string }) {
     return {
       accessToken: await this.getAccessToken(payload),

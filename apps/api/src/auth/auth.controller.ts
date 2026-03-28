@@ -23,4 +23,15 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.authService.login(loginDto, ip, userAgent);
   }
+
+  @Post('refresh')
+  refresh(@Body('refreshToken') refreshToken: string, @Req() req: Request) {
+    const ip =
+      req.ip ||
+      (Array.isArray(req.headers['x-forwarded-for'])
+        ? (req.headers['x-forwarded-for'][0] as string)
+        : (req.headers['x-forwarded-for'] as string));
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    return this.authService.refresh(refreshToken, ip, userAgent);
+  }
 }
