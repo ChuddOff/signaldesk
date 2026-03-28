@@ -53,7 +53,12 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto, ip: string, userAgent: string) {
+  async login(
+    loginDto: LoginDto,
+    ip: string,
+    userAgent: string,
+    deviceId: string,
+  ) {
     const user = await this.prismaService.user.findUnique({
       where: { email: loginDto.email.trim().toLowerCase() },
     });
@@ -72,7 +77,7 @@ export class AuthService {
     }
 
     const anotherSession = await this.prismaService.session.findFirst({
-      where: { userId: user.id, userAgent, ip, revokedAt: null },
+      where: { userId: user.id, deviceId, revokedAt: null },
     });
 
     if (anotherSession?.id) {
@@ -111,6 +116,7 @@ export class AuthService {
           userAgent,
           refreshTokenHash: hashToken,
           lastSeenAt: new Date(),
+          deviceId,
           id: sessionId,
         },
       });
