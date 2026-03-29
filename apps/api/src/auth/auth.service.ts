@@ -243,13 +243,10 @@ export class AuthService {
       return true;
     }
 
-    const curentToken = await this.prismaService.oneTimeToken.findFirst({
+    await this.prismaService.oneTimeToken.updateMany({
       where: { userId: user.id, type: 'PASSWORD_RESET', usedAt: null },
+      data: { usedAt: new Date() },
     });
-
-    if (curentToken?.id) {
-      throw new ConflictException('Письмо уже отправлено');
-    }
 
     const token = this.tokenService.generateToken();
     const hash = this.hashService.sha256(token);
@@ -275,7 +272,7 @@ export class AuthService {
     const passwordHash = await this.hashService.hash(password);
 
     return await this.prismaService.$transaction(async (prisma) => {
-      await prisma.oneTimeToken.updateMany({
+      const updatedToken = await prisma.oneTimeToken.updateMany({
         where: {
           tokenHash: hash,
           usedAt: null,
@@ -286,6 +283,10 @@ export class AuthService {
           usedAt: new Date(),
         },
       });
+
+      if (updatedToken.count === 0) {
+        throw new UnauthorizedException('Неверные данные');
+      }
 
       const oneTimeToken = await prisma.oneTimeToken.findUnique({
         where: { tokenHash: hash },
