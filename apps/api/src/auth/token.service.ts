@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
+import { randomBytes } from 'node:crypto';
 
 @Injectable()
 export class TokenService {
@@ -42,5 +43,8 @@ export class TokenService {
       accessToken: await this.getAccessToken(payload),
       refreshToken: await this.getRefreshToken(payload),
     };
+  }
+  generateToken(): string {
+    return randomBytes(32).toString('hex');
   }
 }

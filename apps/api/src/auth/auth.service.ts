@@ -37,6 +37,19 @@ export class AuthService {
           displayName: registerDto.displayName.trim(),
         },
       });
+      const token = this.tokenService.generateToken();
+      const hash = this.hashService.sha256(token);
+      console.log(token, hash);
+
+      await this.prismaService.oneTimeToken.create({
+        data: {
+          expiresAt: new Date(Date.now() + 1000 * 15 * 60),
+          tokenHash: hash,
+          userId: result.id,
+          type: 'EMAIL_VERIFICATION',
+          createdAt: new Date(),
+        },
+      });
 
       return {
         id: result?.id,
@@ -51,6 +64,37 @@ export class AuthService {
       }
       throw err;
     }
+  }
+
+  async verifyEmail(token: string) {
+    const hash = this.hashService.sha256(token);
+    const oneTimeToken = await this.prismaService.oneTimeToken.findUnique({
+      where: { tokenHash: hash },
+    });
+
+    if (
+      !oneTimeToken ||
+      oneTimeToken.type !== 'EMAIL_VERIFICATION' ||
+      oneTimeToken.expiresAt < new Date() ||
+      oneTimeToken.usedAt !== null
+    ) {
+      throw new UnauthorizedException('Неверные данные');
+    }
+
+    await this.prismaService.oneTimeToken.update({
+      where: { tokenHash: hash },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+    await this.prismaService.user.update({
+      where: { id: oneTimeToken.userId },
+      data: {
+        isEmailVerified: true,
+      },
+    });
+
+    return true;
   }
 
   async login(

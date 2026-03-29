@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import type { Request } from 'express';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { EmailVerifyDto } from './dto/email-verify.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -48,5 +49,10 @@ export class AuthController {
   @Post('logout-all')
   logoutAll(@Body() logoutDto: LogoutDto) {
     return this.authService.logoutAll(logoutDto.refreshToken);
+  }
+
+  @Post('verify-email')
+  verifyEmail(@Body() emailVerifyDto: EmailVerifyDto) {
+    return this.authService.verifyEmail(emailVerifyDto.token);
   }
 }
