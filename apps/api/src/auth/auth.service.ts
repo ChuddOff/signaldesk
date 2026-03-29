@@ -30,25 +30,27 @@ export class AuthService {
     const password = await this.hashService.hash(registerDto.password);
 
     try {
-      const userId = randomUUID();
       const token = this.tokenService.generateToken();
       const hash = this.hashService.sha256(token);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[DEV ONLY] Сгенерирован токен: ${token}`);
+      }
+
+      const result = await this.prismaService.user.create({
+        data: {
+          email,
+          passwordHash: password,
+          displayName: registerDto.displayName.trim(),
+        },
+      });
 
       await this.prismaService.oneTimeToken.create({
         data: {
           expiresAt: new Date(Date.now() + 1000 * 15 * 60),
           tokenHash: hash,
-          userId,
+          userId: result.id,
           type: 'EMAIL_VERIFICATION',
-        },
-      });
-
-      const result = await this.prismaService.user.create({
-        data: {
-          id: userId,
-          email,
-          passwordHash: password,
-          displayName: registerDto.displayName.trim(),
         },
       });
 
@@ -81,21 +83,18 @@ export class AuthService {
     ) {
       throw new UnauthorizedException('Неверные данные');
     }
-
-    await Promise.all([
-      this.prismaService.oneTimeToken.update({
-        where: { tokenHash: hash },
-        data: {
-          usedAt: new Date(),
-        },
-      }),
-      this.prismaService.user.update({
-        where: { id: oneTimeToken.userId },
-        data: {
-          isEmailVerified: true,
-        },
-      }),
-    ]);
+    await this.prismaService.oneTimeToken.update({
+      where: { tokenHash: hash },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+    await this.prismaService.user.update({
+      where: { id: oneTimeToken.userId },
+      data: {
+        isEmailVerified: true,
+      },
+    });
 
     return true;
   }
