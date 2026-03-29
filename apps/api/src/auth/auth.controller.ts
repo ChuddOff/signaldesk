@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { EmailVerifyDto } from './dto/email-verify.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/new-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -54,5 +55,18 @@ export class AuthController {
   @Post('verify-email')
   verifyEmail(@Body() emailVerifyDto: EmailVerifyDto) {
     return this.authService.verifyEmail(emailVerifyDto.token);
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.password,
+    );
   }
 }

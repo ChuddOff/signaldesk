@@ -35,10 +35,6 @@ export class AuthService {
       const token = this.tokenService.generateToken();
       const hash = this.hashService.sha256(token);
 
-      if (this.configService.get<string>('NODE_ENV') !== 'production') {
-        console.log(`[DEV ONLY] Сгенерирован токен: ${token}`);
-      }
-
       return await this.prismaService.$transaction(async (prisma) => {
         const result = await prisma.user.create({
           data: {
@@ -56,7 +52,9 @@ export class AuthService {
             type: 'EMAIL_VERIFICATION',
           },
         });
-
+        if (this.configService.get<string>('NODE_ENV') !== 'production') {
+          console.log(`[DEV ONLY] Сгенерирован токен: ${token}`);
+        }
         return {
           id: result.id,
           email: result.email,
@@ -230,6 +228,75 @@ export class AuthService {
       where: { userId: userId, revokedAt: null },
       data: {
         revokedAt: new Date(),
+      },
+    });
+
+    return true;
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    if (!user?.id) {
+      return true;
+    }
+
+    const token = this.tokenService.generateToken();
+    const hash = this.hashService.sha256(token);
+
+    await this.prismaService.oneTimeToken.create({
+      data: {
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 1000 * 15 * 60),
+        type: 'PASSWORD_RESET',
+        tokenHash: hash,
+      },
+    });
+
+    if (this.configService.get<string>('NODE_ENV') !== 'production') {
+      console.log(`[DEV ONLY] Сгенерирован токен: ${token}`);
+    }
+
+    return true;
+  }
+
+  async resetPassword(token: string, password: string) {
+    const hash = this.hashService.sha256(token);
+    const oneTimeToken = await this.prismaService.oneTimeToken.findUnique({
+      where: { tokenHash: hash },
+    });
+
+    if (
+      !oneTimeToken?.id ||
+      oneTimeToken.type !== 'PASSWORD_RESET' ||
+      oneTimeToken.expiresAt < new Date() ||
+      oneTimeToken.usedAt !== null
+    ) {
+      throw new UnauthorizedException('Неверные данные');
+    }
+
+    const passwordHash = await this.hashService.hash(password);
+
+    await this.prismaService.user.update({
+      where: { id: oneTimeToken.userId },
+      data: {
+        passwordHash,
+      },
+    });
+
+    await this.prismaService.session.updateMany({
+      where: { userId: oneTimeToken.userId },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    await this.prismaService.oneTimeToken.update({
+      where: { tokenHash: hash },
+      data: {
+        usedAt: new Date(),
       },
     });
 
