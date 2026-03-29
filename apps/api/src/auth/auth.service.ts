@@ -10,6 +10,7 @@ import { Prisma } from '../generated/prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { TokenService } from './token.service';
 import { randomUUID } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
     private prismaService: PrismaService,
     private hashService: HashService,
     private tokenService: TokenService,
+    private configService: ConfigService,
   ) {}
   async register(registerDto: RegisterDto) {
     const email = registerDto.email.trim().toLowerCase();
@@ -33,32 +35,34 @@ export class AuthService {
       const token = this.tokenService.generateToken();
       const hash = this.hashService.sha256(token);
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (this.configService.get<string>('NODE_ENV') !== 'production') {
         console.log(`[DEV ONLY] Сгенерирован токен: ${token}`);
       }
 
-      const result = await this.prismaService.user.create({
-        data: {
-          email,
-          passwordHash: password,
-          displayName: registerDto.displayName.trim(),
-        },
-      });
+      return await this.prismaService.$transaction(async (prisma) => {
+        const result = await prisma.user.create({
+          data: {
+            email,
+            passwordHash: password,
+            displayName: registerDto.displayName.trim(),
+          },
+        });
 
-      await this.prismaService.oneTimeToken.create({
-        data: {
-          expiresAt: new Date(Date.now() + 1000 * 15 * 60),
-          tokenHash: hash,
-          userId: result.id,
-          type: 'EMAIL_VERIFICATION',
-        },
-      });
+        await prisma.oneTimeToken.create({
+          data: {
+            expiresAt: new Date(Date.now() + 1000 * 15 * 60),
+            tokenHash: hash,
+            userId: result.id,
+            type: 'EMAIL_VERIFICATION',
+          },
+        });
 
-      return {
-        id: result?.id,
-        email: result?.email,
-        displayName: result?.displayName,
-      };
+        return {
+          id: result.id,
+          email: result.email,
+          displayName: result.displayName,
+        };
+      });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
