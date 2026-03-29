@@ -6,7 +6,7 @@ import type { Request } from 'express';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { EmailVerifyDto } from './dto/email-verify.dto';
-import { ForgotPasswordDto, ResetPasswordDto } from './dto/new-password.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 
 @Controller('auth')
 export class AuthController {

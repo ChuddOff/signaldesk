@@ -243,6 +243,14 @@ export class AuthService {
       return true;
     }
 
+    const curentToken = await this.prismaService.oneTimeToken.findFirst({
+      where: { userId: user.id, type: 'PASSWORD_RESET', usedAt: null },
+    });
+
+    if (curentToken?.id) {
+      throw new ConflictException('Письмо уже отправлено');
+    }
+
     const token = this.tokenService.generateToken();
     const hash = this.hashService.sha256(token);
 
@@ -264,43 +272,46 @@ export class AuthService {
 
   async resetPassword(token: string, password: string) {
     const hash = this.hashService.sha256(token);
-    const oneTimeToken = await this.prismaService.oneTimeToken.findUnique({
-      where: { tokenHash: hash },
-    });
-
-    if (
-      !oneTimeToken?.id ||
-      oneTimeToken.type !== 'PASSWORD_RESET' ||
-      oneTimeToken.expiresAt < new Date() ||
-      oneTimeToken.usedAt !== null
-    ) {
-      throw new UnauthorizedException('Неверные данные');
-    }
-
     const passwordHash = await this.hashService.hash(password);
 
-    await this.prismaService.user.update({
-      where: { id: oneTimeToken.userId },
-      data: {
-        passwordHash,
-      },
-    });
+    return await this.prismaService.$transaction(async (prisma) => {
+      await prisma.oneTimeToken.updateMany({
+        where: {
+          tokenHash: hash,
+          usedAt: null,
+          type: 'PASSWORD_RESET',
+          expiresAt: { gt: new Date() },
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
 
-    await this.prismaService.session.updateMany({
-      where: { userId: oneTimeToken.userId },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+      const oneTimeToken = await prisma.oneTimeToken.findUnique({
+        where: { tokenHash: hash },
+        select: { userId: true },
+      });
 
-    await this.prismaService.oneTimeToken.update({
-      where: { tokenHash: hash },
-      data: {
-        usedAt: new Date(),
-      },
-    });
+      if (!oneTimeToken?.userId) {
+        throw new UnauthorizedException('Неверные данные');
+      }
 
-    return true;
+      await prisma.user.updateMany({
+        where: { id: oneTimeToken.userId },
+        data: {
+          passwordHash,
+        },
+      });
+
+      await prisma.session.updateMany({
+        where: { userId: oneTimeToken.userId, revokedAt: null },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      return true;
+    });
   }
 
   private async resolveSessionByRefreshToken(refreshToken: string) {
